@@ -1,0 +1,8 @@
+{
+  "name": "Silauncer",
+  "description": "A minimalist, lightning-fast Android launcher featuring a single vertical-scroll screen and customizable grid for instant, lightweight app access.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

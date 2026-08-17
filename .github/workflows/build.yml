@@ -1,0 +1,199 @@
+name: Build and Validate APKs
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release Tag (optional)'
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Setup Android SDK Build-Tools
+        uses: android-actions/setup-android@v3
+
+      - name: Validate Gradle Wrapper
+        run: |
+          if [ ! -f "gradlew" ] || [ ! -f "gradle/wrapper/gradle-wrapper.properties" ] || [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+            echo "Gradle wrapper incomplete. Bootstrapping reproducible wrapper..."
+            gradle wrapper
+          fi
+          chmod +x gradlew
+          ./gradlew --version
+
+      - name: Build Debug APK
+        run: |
+          ./gradlew clean
+          ./gradlew assembleDebug
+
+      - name: Determine ABI Splits
+        id: abi
+        run: |
+          # Audit native libraries in the generated debug APK
+          ABIS=$(unzip -l app/build/outputs/apk/debug/app-debug.apk | grep "lib/.*\.so" | awk -F'lib/' '{print $2}' | awk -F'/' '{print $1}' | sort -u | xargs)
+          
+          if [ -z "$ABIS" ]; then
+            echo "No native libraries found. Skipping ABI splits."
+            echo "has_native=false" >> $GITHUB_ENV
+          else
+            echo "Native libraries found for ABIs: $ABIS"
+            echo "has_native=true" >> $GITHUB_ENV
+            
+            GRADLE_ABIS=""
+            for abi in $ABIS; do
+              if [ -n "$GRADLE_ABIS" ]; then
+                GRADLE_ABIS="$GRADLE_ABIS, "
+              fi
+              GRADLE_ABIS="$GRADLE_ABIS\"$abi\""
+            done
+            
+            # Inject ABI splits configuration into app/build.gradle.kts
+            cat <<INNER_EOF >> app/build.gradle.kts
+            
+            android {
+                splits {
+                    abi {
+                        isEnable = true
+                        reset()
+                        include($GRADLE_ABIS)
+                        isUniversalApk = true
+                    }
+                }
+            }
+            INNER_EOF
+          fi
+
+      - name: Build Release APKs
+        run: KEYSTORE_PATH=${{ github.workspace }}/debug.keystore STORE_PASSWORD=android KEY_PASSWORD=android KEY_ALIAS=androiddebugkey ./gradlew assembleRelease
+
+      - name: Extract Metadata and Rename APKs
+        id: metadata
+        run: |
+          mkdir -p apks_output
+          cp app/build/outputs/apk/debug/app-debug.apk apks_output/silauncer-debug.apk
+          
+          if [ "$has_native" = "true" ]; then
+            find app/build/outputs/apk/release/ -name "*universal*.apk" -exec cp {} apks_output/silauncer-universal.apk \;
+            find app/build/outputs/apk/release/ -name "*arm64-v8a*.apk" -exec cp {} apks_output/silauncer-arm64-v8a.apk \;
+            find app/build/outputs/apk/release/ -name "*armeabi-v7a*.apk" -exec cp {} apks_output/silauncer-armeabi-v7a.apk \;
+            find app/build/outputs/apk/release/ -name "*x86_64*.apk" -exec cp {} apks_output/silauncer-x86_64.apk \;
+            find app/build/outputs/apk/release/ -name "*x86.apk" -exec cp {} apks_output/silauncer-x86.apk \;
+          else
+            find app/build/outputs/apk/release/ -name "*.apk" -exec cp {} apks_output/silauncer-universal.apk \;
+          fi
+          
+          if [ ! -f apks_output/silauncer-universal.apk ]; then
+            cp app/build/outputs/apk/release/*.apk apks_output/silauncer-universal.apk
+          fi
+
+      - name: Validate APKs
+        run: |
+          for apk in apks_output/*.apk; do
+            if [ ! -f "$apk" ]; then
+              echo "APK $apk not found!"
+              exit 1
+            fi
+            
+            SIZE=$(stat -c%s "$apk")
+            if [ "$SIZE" -eq 0 ]; then
+              echo "APK $apk is empty!"
+              exit 1
+            fi
+            
+            echo "Validating $apk with apkanalyzer..."
+            APP_ID=$(apkanalyzer manifest application-id "$apk")
+            V_CODE=$(apkanalyzer manifest version-code "$apk")
+            V_NAME=$(apkanalyzer manifest version-name "$apk")
+            
+            echo "Application ID: $APP_ID"
+            echo "Version Code: $V_CODE"
+            echo "Version Name: $V_NAME"
+            
+            if [ -z "$APP_ID" ] || [ -z "$V_CODE" ] || [ -z "$V_NAME" ]; then
+              echo "Failed to extract manifest information for $apk"
+              exit 1
+            fi
+          done
+
+      - name: Generate Checksums
+        run: |
+          cd apks_output
+          sha256sum *.apk > checksums.txt
+          cat checksums.txt
+
+      - name: Upload Debug Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: silauncer-debug
+          path: apks_output/silauncer-debug.apk
+          retention-days: 7
+
+      - name: Upload Universal Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: silauncer-universal
+          path: apks_output/silauncer-universal.apk
+          retention-days: 7
+
+      - name: Upload arm64-v8a Artifact
+        if: hashFiles('apks_output/silauncer-arm64-v8a.apk') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: silauncer-arm64-v8a
+          path: apks_output/silauncer-arm64-v8a.apk
+          retention-days: 7
+
+      - name: Upload armeabi-v7a Artifact
+        if: hashFiles('apks_output/silauncer-armeabi-v7a.apk') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: silauncer-armeabi-v7a
+          path: apks_output/silauncer-armeabi-v7a.apk
+          retention-days: 7
+
+      - name: Upload x86_64 Artifact
+        if: hashFiles('apks_output/silauncer-x86_64.apk') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: silauncer-x86_64
+          path: apks_output/silauncer-x86_64.apk
+          retention-days: 7
+
+      - name: Upload x86 Artifact
+        if: hashFiles('apks_output/silauncer-x86.apk') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: silauncer-x86
+          path: apks_output/silauncer-x86.apk
+          retention-days: 7
+
+      - name: Upload Checksums Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: silauncer-checksums
+          path: apks_output/checksums.txt
+          retention-days: 7
+
+      - name: Create GitHub Release
+        if: github.event.inputs.release_tag != ''
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.release_tag }}
+          files: |
+            apks_output/*.apk
+            apks_output/checksums.txt

@@ -1,0 +1,16 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Letter S in Gray -->
+    <path
+        android:fillColor="#808080"
+        android:pathData="M 65.0 38.0 C 65.0 35.0 62.0 33.0 57.0 33.0 C 51.0 33.0 48.0 36.0 48.0 39.0 C 48.0 44.0 63.0 45.0 63.0 55.0 C 63.0 63.0 56.0 66.0 48.0 66.0 C 41.0 66.0 37.0 61.0 37.0 56.0 L 45.0 56.0 C 45.0 59.0 49.0 60.0 53.0 60.0 C 58.0 60.0 60.0 57.0 60.0 55.0 C 60.0 50.0 45.0 49.0 45.0 39.0 C 45.0 31.0 52.0 27.0 58.0 27.0 C 65.0 27.0 70.0 32.0 70.0 38.0 Z" />
+        
+    <!-- Lightning in Yellow -->
+    <path
+        android:fillColor="#FFEB3B"
+        android:pathData="M52,22 l-12,35 h14 l-6,30 l20,-40 h-16 l8,-25 z" />
+</vector>
