@@ -60,19 +60,17 @@ jobs:
             done
             
             # Inject ABI splits configuration into app/build.gradle.kts
-            cat <<INNER_EOF >> app/build.gradle.kts
-            
-            android {
-                splits {
-                    abi {
-                        isEnable = true
-                        reset()
-                        include($GRADLE_ABIS)
-                        isUniversalApk = true
-                    }
-                }
-            }
-            INNER_EOF
+            echo "" >> app/build.gradle.kts
+            echo "android {" >> app/build.gradle.kts
+            echo "    splits {" >> app/build.gradle.kts
+            echo "        abi {" >> app/build.gradle.kts
+            echo "            isEnable = true" >> app/build.gradle.kts
+            echo "            reset()" >> app/build.gradle.kts
+            echo "            include($GRADLE_ABIS)" >> app/build.gradle.kts
+            echo "            isUniversalApk = true" >> app/build.gradle.kts
+            echo "        }" >> app/build.gradle.kts
+            echo "    }" >> app/build.gradle.kts
+            echo "}" >> app/build.gradle.kts
           fi
 
       - name: Build Release APKs
