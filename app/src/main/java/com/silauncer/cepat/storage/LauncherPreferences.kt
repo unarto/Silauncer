@@ -39,10 +39,6 @@ class LauncherPreferences {
         get() = kv.decodeStringSet("hidden_apps", emptySet()) ?: emptySet()
         set(value) { kv.encode("hidden_apps", value) }
 
-    var dragDropEnabled: Boolean
-        get() = kv.decodeBool("drag_drop_enabled", true)
-        set(value) { kv.encode("drag_drop_enabled", value) }
-
     var appOrder: List<String>
         get() = kv.decodeString("app_order", "")?.split(",")?.filter { it.isNotEmpty() } ?: emptyList()
         set(value) { kv.encode("app_order", value.joinToString(",")) }

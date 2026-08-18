@@ -70,7 +70,9 @@ class IconLoader(private val scope: CoroutineScope) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                // Gagal memuat icon, biarkan logging / fallback tanpa menelan cancellation
+                withContext(Dispatchers.Main) {
+                    onLoaded(getDefaultIcon(context), cacheKey)
+                }
             } finally {
                 // Bersihkan in-flight map secara atomik hanya jika instance Deferred masih sama
                 inFlightRequests.remove(cacheKey, deferred)

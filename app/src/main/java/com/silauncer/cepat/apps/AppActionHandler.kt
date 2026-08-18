@@ -10,6 +10,7 @@ import androidx.appcompat.app.AlertDialog
 import com.silauncer.cepat.R
 
 class AppActionHandler(private val context: Context) {
+    private var activeDialog: AlertDialog? = null
 
     fun launchApp(app: AppInfo) {
         val intent = app.launchIntent()
@@ -17,11 +18,12 @@ class AppActionHandler(private val context: Context) {
     }
 
     fun showAppMenu(app: AppInfo) {
+        dismissAppMenu()
         val options = arrayOf(
             context.getString(R.string.app_info), 
             context.getString(R.string.uninstall)
         )
-        AlertDialog.Builder(context)
+        activeDialog = AlertDialog.Builder(context)
             .setTitle(app.name)
             .setItems(options) { _, which ->
                 when (which) {
@@ -29,7 +31,13 @@ class AppActionHandler(private val context: Context) {
                     1 -> requestUninstall(app)
                 }
             }
+            .setOnDismissListener { activeDialog = null }
             .show()
+    }
+
+    fun dismissAppMenu() {
+        activeDialog?.dismiss()
+        activeDialog = null
     }
 
     private fun openAppInfo(app: AppInfo) {

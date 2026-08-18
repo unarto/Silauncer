@@ -28,7 +28,6 @@ class LauncherAppController(
     }
 
     suspend fun saveCustomAppOrder(visibleApps: List<AppInfo>) {
-        if (!prefs.dragDropEnabled) return
         val allApps = appStateHolder.getApps()
         val newOrder = calculateMergedOrder(allApps, visibleApps, prefs.appOrder)
         prefs.appOrder = newOrder

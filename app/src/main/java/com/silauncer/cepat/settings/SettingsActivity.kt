@@ -35,7 +35,6 @@ class SettingsActivity : AppCompatActivity() {
             setupLabelSizeSpinner(layout)
             setupIconSpacingSpinner(layout)
             setupHiddenAppsButton(layout)
-            setupDragDropSpinner(layout)
             setupResetButton(layout)
 
             val scrollView = ScrollView(this)
@@ -44,6 +43,7 @@ class SettingsActivity : AppCompatActivity() {
         } catch (e: Exception) {
             android.util.Log.e("SILAUNCER", "SETTINGS CRASH: " + e.message, e)
             android.widget.Toast.makeText(this, "SETTINGS CRASH: " + e.message, android.widget.Toast.LENGTH_LONG).show()
+            finish()
         }
     }
 
@@ -130,16 +130,6 @@ class SettingsActivity : AppCompatActivity() {
         layout.addView(hiddenAppsBtn)
     }
 
-    private fun setupDragDropSpinner(layout: LinearLayout) {
-        SettingsUi.addSpinnerSetting(
-            this, layout, "Drag & Drop",
-            arrayOf("Enabled", "Disabled"),
-            if (prefs.dragDropEnabled) "Enabled" else "Disabled"
-        ) { selected ->
-            prefs.dragDropEnabled = selected == "Enabled"
-        }
-    }
-
     private fun setupResetButton(layout: LinearLayout) {
         val resetLayoutBtn = Button(this).apply {
             text = "Reset Layout"
@@ -170,7 +160,6 @@ class SettingsActivity : AppCompatActivity() {
         prefs.showAppLabel = true
         prefs.labelSize = 12f
         prefs.iconSpacing = 4
-        prefs.dragDropEnabled = true
         prefs.appOrder = emptyList()
     }
 }

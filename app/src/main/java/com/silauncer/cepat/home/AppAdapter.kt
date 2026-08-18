@@ -20,8 +20,7 @@ class AppAdapter(
     private var labelSizeSp: Float,
     private var iconSpacingPx: Int,
     private var gridRows: Int,
-    private val onClick: (AppInfo) -> Unit,
-    private val onLongClick: ((AppInfo) -> Unit)? = null
+    private val onClick: (AppInfo) -> Unit
 ) : RecyclerView.Adapter<AppAdapter.AppViewHolder>() {
 
     private val apps = mutableListOf<AppInfo>()
@@ -50,9 +49,7 @@ class AppAdapter(
 
     override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
         super.onDetachedFromRecyclerView(recyclerView)
-        if (recyclerView.viewTreeObserver.isAlive) {
-            recyclerView.viewTreeObserver.removeOnGlobalLayoutListener(layoutListener)
-        }
+        recyclerView.viewTreeObserver.removeOnGlobalLayoutListener(layoutListener)
         this.recyclerView = null
     }
 
@@ -149,17 +146,12 @@ class AppAdapter(
             }
             
             itemView.setOnClickListener { onClick(app) }
-            itemView.setOnLongClickListener {
-                onLongClick?.invoke(app)
-                true
-            }
         }
 
         fun unbind() {
             iconView.tag = null
             iconView.setImageDrawable(null)
             itemView.setOnClickListener(null)
-            itemView.setOnLongClickListener(null)
         }
     }
 }

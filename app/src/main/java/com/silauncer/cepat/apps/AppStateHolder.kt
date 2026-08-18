@@ -15,23 +15,18 @@ class AppStateHolder {
     suspend fun setApps(newApps: List<AppInfo>) {
         mutex.withLock {
             apps.clear()
-            for (app in newApps) {
-                if (apps.none { it.componentName == app.componentName && it.user == app.user }) {
-                    apps.add(app)
-                }
-            }
+            val uniqueApps = newApps.distinctBy { it.cacheKey }
+            apps.addAll(uniqueApps)
         }
     }
 
     suspend fun addApps(newApps: List<AppInfo>): List<AppInfo> {
         val added = ArrayList<AppInfo>()
         mutex.withLock {
-            for (app in newApps) {
-                if (apps.none { it.componentName == app.componentName && it.user == app.user }) {
-                    apps.add(app)
-                    added.add(app)
-                }
-            }
+            val existingKeys = apps.map { it.cacheKey }.toSet()
+            val uniqueNewApps = newApps.distinctBy { it.cacheKey }.filter { it.cacheKey !in existingKeys }
+            apps.addAll(uniqueNewApps)
+            added.addAll(uniqueNewApps)
         }
         return added
     }

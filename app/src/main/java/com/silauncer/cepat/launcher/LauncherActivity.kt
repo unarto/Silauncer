@@ -6,7 +6,6 @@ import androidx.activity.OnBackPressedCallback
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.recyclerview.widget.ItemTouchHelper
 import com.silauncer.cepat.R
 import com.silauncer.cepat.apps.AppActionHandler
 import com.silauncer.cepat.apps.AppChangeReceiver
@@ -26,6 +25,7 @@ class LauncherActivity : AppCompatActivity() {
     
     private lateinit var appController: LauncherAppController
     private lateinit var actionHandler: AppActionHandler
+    private lateinit var dragHandler: GridDragAndDropHandler
     
     private var isLoaded = false
 
@@ -64,68 +64,18 @@ class LauncherActivity : AppCompatActivity() {
                 } else {
                     actionHandler.launchApp(app)
                 }
-            },
-            onLongClick = { app ->
-                if (!prefs.dragDropEnabled) {
-                    actionHandler.showAppMenu(app)
-                }
             }
         )
         recyclerView.adapter = adapter
         
-        val touchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
-            ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT, 0
-        ) {
-            private var dragStartedPosition = RecyclerView.NO_POSITION
-
-            override fun onSelectedChanged(viewHolder: RecyclerView.ViewHolder?, actionState: Int) {
-                super.onSelectedChanged(viewHolder, actionState)
-                if (actionState == ItemTouchHelper.ACTION_STATE_DRAG && viewHolder != null) {
-                    dragStartedPosition = viewHolder.bindingAdapterPosition
-                }
-            }
-
-            override fun onMove(
-                recyclerView: RecyclerView,
-                viewHolder: RecyclerView.ViewHolder,
-                target: RecyclerView.ViewHolder
-            ): Boolean {
-                if (!prefs.dragDropEnabled) return false
-                val from = viewHolder.bindingAdapterPosition
-                val to = target.bindingAdapterPosition
-                if (from != RecyclerView.NO_POSITION && to != RecyclerView.NO_POSITION) {
-                    adapter.moveItem(from, to)
-                    return true
-                }
-                return false
-            }
-
-            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {}
-
-            override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
-                super.clearView(recyclerView, viewHolder)
-                val dropPosition = viewHolder.bindingAdapterPosition
-                if (dropPosition != RecyclerView.NO_POSITION && dragStartedPosition == dropPosition) {
-                    // Long press without moving in drag mode -> show app menu
-                    val app = adapter.getItems().getOrNull(dropPosition)
-                    if (app != null) {
-                        actionHandler.showAppMenu(app)
-                    }
-                } else if (dropPosition != RecyclerView.NO_POSITION && dragStartedPosition != RecyclerView.NO_POSITION && prefs.dragDropEnabled) {
-                    // Moved -> save new order deterministically via controller
-                    val currentItems = adapter.getItems().toList()
-                    lifecycleScope.launch {
-                        appController.saveCustomAppOrder(currentItems)
-                    }
-                }
-                dragStartedPosition = RecyclerView.NO_POSITION
-            }
-
-            override fun isLongPressDragEnabled(): Boolean {
-                return prefs.dragDropEnabled
-            }
-        })
-        touchHelper.attachToRecyclerView(recyclerView)
+        dragHandler = GridDragAndDropHandler(
+            context = this,
+            recyclerView = recyclerView,
+            adapter = adapter,
+            appController = appController,
+            actionHandler = actionHandler,
+            coroutineScope = lifecycleScope
+        )
         
         appChangeReceiver = AppChangeReceiver { action, packageName, replacing ->
             lifecycleScope.launch {
