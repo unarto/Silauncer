@@ -47,17 +47,28 @@ class LauncherActivity : AppCompatActivity() {
         val iconSizePx = (prefs.iconSize * resources.displayMetrics.density).toInt()
         val spacingPx = (prefs.iconSpacing * resources.displayMetrics.density).toInt()
         
-        adapter = AppAdapter(lifecycleScope, iconSizePx, prefs.showAppLabel, prefs.labelSize, spacingPx, prefs.gridRows) { app ->
-            if (app.packageName == applicationContext.packageName) {
-                try {
-                    startActivity(android.content.Intent(this, com.silauncer.cepat.settings.SettingsActivity::class.java))
-                } catch (e: Exception) {
-                    android.util.Log.e("SILAUNCER", "CRASH: " + e.message, e)
+        adapter = AppAdapter(
+            lifecycleScope,
+            iconSizePx,
+            prefs.showAppLabel,
+            prefs.labelSize,
+            spacingPx,
+            prefs.gridRows,
+            onClick = { app ->
+                if (app.packageName == applicationContext.packageName) {
+                    try {
+                        startActivity(android.content.Intent(this, com.silauncer.cepat.settings.SettingsActivity::class.java))
+                    } catch (e: Exception) {
+                        android.util.Log.e("SILAUNCER", "CRASH: " + e.message, e)
+                    }
+                } else {
+                    actionHandler.launchApp(app)
                 }
-            } else {
-                actionHandler.launchApp(app)
+            },
+            onLongClick = { app ->
+                actionHandler.showAppMenu(app)
             }
-        }
+        )
         recyclerView.adapter = adapter
         
         val touchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
@@ -77,6 +88,7 @@ class LauncherActivity : AppCompatActivity() {
                 viewHolder: RecyclerView.ViewHolder,
                 target: RecyclerView.ViewHolder
             ): Boolean {
+                if (!prefs.dragDropEnabled) return false
                 adapter.moveItem(viewHolder.adapterPosition, target.adapterPosition)
                 return true
             }
@@ -88,23 +100,22 @@ class LauncherActivity : AppCompatActivity() {
                 val dropPosition = viewHolder.adapterPosition
                 if (dropPosition != -1 && dragStartedPosition == dropPosition) {
                     // Long press without moving -> show app menu
-                    val app = adapter.getItems()[dropPosition]
-                    actionHandler.showAppMenu(app)
-                } else if (dropPosition != -1 && dragStartedPosition != -1) {
-                    // Moved -> save new order
-                    if (prefs.dragDropEnabled) {
-                        val newOrder = adapter.getItems().map { it.componentName.flattenToString() }
-                        prefs.appOrder = newOrder
-                        if (prefs.sortMode != "custom") {
-                            prefs.sortMode = "custom"
-                        }
+                    val app = adapter.getItems().getOrNull(dropPosition)
+                    if (app != null) {
+                        actionHandler.showAppMenu(app)
+                    }
+                } else if (dropPosition != -1 && dragStartedPosition != -1 && prefs.dragDropEnabled) {
+                    // Moved -> save new order deterministically via controller
+                    val currentItems = adapter.getItems().toList()
+                    lifecycleScope.launch {
+                        appController.saveCustomAppOrder(currentItems)
                     }
                 }
                 dragStartedPosition = -1
             }
 
             override fun isLongPressDragEnabled(): Boolean {
-                return true // Always allow long press, we handle the menu on drop without move
+                return prefs.dragDropEnabled
             }
         })
         touchHelper.attachToRecyclerView(recyclerView)

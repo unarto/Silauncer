@@ -1,8 +1,9 @@
 package com.silauncer.cepat.launcher
 
 import android.content.Intent
-import com.silauncer.cepat.apps.AppInfo
+import android.os.Process
 import com.silauncer.cepat.apps.AppDataSource
+import com.silauncer.cepat.apps.AppInfo
 import com.silauncer.cepat.apps.AppStateHolder
 import com.silauncer.cepat.apps.AppSorter
 import com.silauncer.cepat.cache.IconCache
@@ -16,16 +17,26 @@ class LauncherAppController(
     private val prefs: LauncherPreferences
 ) {
     suspend fun loadAppsInitial(): List<AppInfo> {
-        val user = android.os.Process.myUserHandle()
-        val activities = appDataSource.getActivities(null, user)
-        appStateHolder.resetApps(activities, user)
+        val user = Process.myUserHandle()
+        val installedApps = appDataSource.getInstalledApps(null, user)
+        appStateHolder.setApps(installedApps)
         return getSortedVisibleApps()
     }
 
     suspend fun refreshApps(): List<AppInfo> {
         return getSortedVisibleApps()
     }
-    
+
+    suspend fun saveCustomAppOrder(visibleApps: List<AppInfo>) {
+        if (!prefs.dragDropEnabled) return
+        val allApps = appStateHolder.getApps()
+        val newOrder = calculateMergedOrder(allApps, visibleApps, prefs.appOrder)
+        prefs.appOrder = newOrder
+        if (prefs.sortMode != "custom") {
+            prefs.sortMode = "custom"
+        }
+    }
+
     private suspend fun getSortedVisibleApps(): List<AppInfo> {
         val apps = appStateHolder.getApps()
         return withContext(Dispatchers.Default) {
@@ -37,13 +48,13 @@ class LauncherAppController(
 
     suspend fun handlePackageEvent(action: String?, packageName: String?, replacing: Boolean): Boolean {
         if (action == null || packageName == null) return false
-        val user = android.os.Process.myUserHandle()
-        
+        val user = Process.myUserHandle()
+
         var changed = false
         when (action) {
             Intent.ACTION_PACKAGE_ADDED -> {
-                val activities = appDataSource.getActivities(packageName, user)
-                val added = appStateHolder.addActivities(activities, user)
+                val newApps = appDataSource.getInstalledApps(packageName, user)
+                val added = appStateHolder.addApps(newApps)
                 if (added.isNotEmpty()) changed = true
             }
             Intent.ACTION_PACKAGE_REMOVED -> {
@@ -55,12 +66,50 @@ class LauncherAppController(
             }
             Intent.ACTION_PACKAGE_CHANGED, Intent.ACTION_PACKAGE_REPLACED -> {
                 appStateHolder.removePackage(packageName, user)
-                val activities = appDataSource.getActivities(packageName, user)
-                val updated = appStateHolder.addActivities(activities, user)
+                val newApps = appDataSource.getInstalledApps(packageName, user)
+                val updated = appStateHolder.addApps(newApps)
                 IconCache.removePackage(packageName)
                 if (updated.isNotEmpty()) changed = true
             }
         }
         return changed
+    }
+
+    companion object {
+        fun calculateMergedOrder(
+            allApps: List<AppInfo>,
+            visibleReordered: List<AppInfo>,
+            currentSavedOrder: List<String>
+        ): List<String> {
+            val allInstalledKeys = allApps.map { it.componentName.flattenToString() }.toSet()
+            val visibleKeys = visibleReordered.map { it.componentName.flattenToString() }
+            val visibleKeySet = visibleKeys.toSet()
+
+            val baseOrder = if (currentSavedOrder.isNotEmpty()) {
+                val pruned = currentSavedOrder.filter { allInstalledKeys.contains(it) }
+                val missing = allApps.map { it.componentName.flattenToString() }.filter { !pruned.contains(it) }
+                pruned + missing
+            } else {
+                allApps.sortedBy { it.name.lowercase() }.map { it.componentName.flattenToString() }
+            }
+
+            var visibleIndex = 0
+            val result = mutableListOf<String>()
+            for (key in baseOrder) {
+                if (visibleKeySet.contains(key)) {
+                    if (visibleIndex < visibleKeys.size) {
+                        result.add(visibleKeys[visibleIndex])
+                        visibleIndex++
+                    }
+                } else {
+                    result.add(key)
+                }
+            }
+            while (visibleIndex < visibleKeys.size) {
+                result.add(visibleKeys[visibleIndex])
+                visibleIndex++
+            }
+            return result
+        }
     }
 }

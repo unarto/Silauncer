@@ -1,6 +1,5 @@
 package com.silauncer.cepat.apps
 
-import android.content.pm.LauncherActivityInfo
 import android.os.UserHandle
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -13,21 +12,23 @@ class AppStateHolder {
         apps.toList()
     }
 
-    suspend fun resetApps(activities: List<LauncherActivityInfo>, user: UserHandle) {
+    suspend fun setApps(newApps: List<AppInfo>) {
         mutex.withLock {
             apps.clear()
-            for (activity in activities) {
-                addActivityLocked(activity, user)
+            for (app in newApps) {
+                if (apps.none { it.componentName == app.componentName && it.user == app.user }) {
+                    apps.add(app)
+                }
             }
         }
     }
 
-    suspend fun addActivities(activities: List<LauncherActivityInfo>, user: UserHandle): List<AppInfo> {
+    suspend fun addApps(newApps: List<AppInfo>): List<AppInfo> {
         val added = ArrayList<AppInfo>()
         mutex.withLock {
-            for (activity in activities) {
-                val app = addActivityLocked(activity, user)
-                if (app != null) {
+            for (app in newApps) {
+                if (apps.none { it.componentName == app.componentName && it.user == app.user }) {
+                    apps.add(app)
                     added.add(app)
                 }
             }
@@ -41,25 +42,5 @@ class AppStateHolder {
                 it.user == user && it.packageName == packageName
             }
         }
-    }
-
-    private fun addActivityLocked(
-        activity: LauncherActivityInfo,
-        user: UserHandle
-    ): AppInfo? {
-        val component = activity.componentName
-        if (apps.any {
-                it.componentName == component && it.user == user
-            }) {
-            return null
-        }
-        val app = AppInfo(
-            name = activity.label?.toString() ?: component.packageName,
-            componentName = component,
-            packageName = component.packageName,
-            user = user
-        )
-        apps.add(app)
-        return app
     }
 }

@@ -20,7 +20,8 @@ class AppAdapter(
     private var labelSizeSp: Float,
     private var iconSpacingPx: Int,
     private var gridRows: Int,
-    private val onClick: (AppInfo) -> Unit
+    private val onClick: (AppInfo) -> Unit,
+    private val onLongClick: ((AppInfo) -> Unit)? = null
 ) : RecyclerView.Adapter<AppAdapter.AppViewHolder>() {
 
     private val apps = mutableListOf<AppInfo>()
@@ -138,6 +139,10 @@ class AppAdapter(
             }
             
             itemView.setOnClickListener { onClick(app) }
+            itemView.setOnLongClickListener {
+                onLongClick?.invoke(app)
+                true
+            }
         }
     }
 }

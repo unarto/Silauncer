@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import android.app.AlertDialog
+import com.silauncer.cepat.apps.GetInstalledAppsUseCase
 import com.silauncer.cepat.storage.LauncherPreferences
 
 class SettingsActivity : AppCompatActivity() {
@@ -118,7 +119,7 @@ class SettingsActivity : AppCompatActivity() {
             text = "Manage Hidden Apps"
             setOnClickListener {
                 lifecycleScope.launch {
-                    val useCase = com.silauncer.cepat.apps.GetInstalledAppsUseCase(com.silauncer.cepat.apps.AppDataSource(this@SettingsActivity))
+                    val useCase = GetInstalledAppsUseCase(this@SettingsActivity)
                     val apps = useCase()
                     if (!isFinishing && !isDestroyed) {
                         HiddenAppsDialog.show(this@SettingsActivity, apps, prefs)
