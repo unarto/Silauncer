@@ -66,7 +66,9 @@ class LauncherActivity : AppCompatActivity() {
                 }
             },
             onLongClick = { app ->
-                actionHandler.showAppMenu(app)
+                if (!prefs.dragDropEnabled) {
+                    actionHandler.showAppMenu(app)
+                }
             }
         )
         recyclerView.adapter = adapter
@@ -74,12 +76,12 @@ class LauncherActivity : AppCompatActivity() {
         val touchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
             ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT, 0
         ) {
-            private var dragStartedPosition = -1
+            private var dragStartedPosition = RecyclerView.NO_POSITION
 
             override fun onSelectedChanged(viewHolder: RecyclerView.ViewHolder?, actionState: Int) {
                 super.onSelectedChanged(viewHolder, actionState)
                 if (actionState == ItemTouchHelper.ACTION_STATE_DRAG && viewHolder != null) {
-                    dragStartedPosition = viewHolder.adapterPosition
+                    dragStartedPosition = viewHolder.bindingAdapterPosition
                 }
             }
 
@@ -89,29 +91,34 @@ class LauncherActivity : AppCompatActivity() {
                 target: RecyclerView.ViewHolder
             ): Boolean {
                 if (!prefs.dragDropEnabled) return false
-                adapter.moveItem(viewHolder.adapterPosition, target.adapterPosition)
-                return true
+                val from = viewHolder.bindingAdapterPosition
+                val to = target.bindingAdapterPosition
+                if (from != RecyclerView.NO_POSITION && to != RecyclerView.NO_POSITION) {
+                    adapter.moveItem(from, to)
+                    return true
+                }
+                return false
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {}
 
             override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
                 super.clearView(recyclerView, viewHolder)
-                val dropPosition = viewHolder.adapterPosition
-                if (dropPosition != -1 && dragStartedPosition == dropPosition) {
-                    // Long press without moving -> show app menu
+                val dropPosition = viewHolder.bindingAdapterPosition
+                if (dropPosition != RecyclerView.NO_POSITION && dragStartedPosition == dropPosition) {
+                    // Long press without moving in drag mode -> show app menu
                     val app = adapter.getItems().getOrNull(dropPosition)
                     if (app != null) {
                         actionHandler.showAppMenu(app)
                     }
-                } else if (dropPosition != -1 && dragStartedPosition != -1 && prefs.dragDropEnabled) {
+                } else if (dropPosition != RecyclerView.NO_POSITION && dragStartedPosition != RecyclerView.NO_POSITION && prefs.dragDropEnabled) {
                     // Moved -> save new order deterministically via controller
                     val currentItems = adapter.getItems().toList()
                     lifecycleScope.launch {
                         appController.saveCustomAppOrder(currentItems)
                     }
                 }
-                dragStartedPosition = -1
+                dragStartedPosition = RecyclerView.NO_POSITION
             }
 
             override fun isLongPressDragEnabled(): Boolean {

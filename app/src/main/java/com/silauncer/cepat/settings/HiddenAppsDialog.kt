@@ -7,11 +7,12 @@ import com.silauncer.cepat.storage.LauncherPreferences
 
 object HiddenAppsDialog {
     fun show(context: Context, apps: List<AppInfo>, prefs: LauncherPreferences) {
-        val appNames = apps.map { it.name }.toTypedArray()
-        val packageNames = apps.map { it.componentName.packageName }.toTypedArray()
+        val sortedApps = apps.sortedBy { it.name.lowercase() }
+        val appNames = sortedApps.map { it.name }.toTypedArray()
+        val packageNames = sortedApps.map { it.componentName.packageName }.toTypedArray()
         val hiddenSet = prefs.hiddenApps.toMutableSet()
         
-        val checkedItems = BooleanArray(apps.size) { i ->
+        val checkedItems = BooleanArray(sortedApps.size) { i ->
             hiddenSet.contains(packageNames[i])
         }
         

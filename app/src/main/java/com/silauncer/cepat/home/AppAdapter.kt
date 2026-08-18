@@ -3,10 +3,10 @@ package com.silauncer.cepat.home
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.silauncer.cepat.R
 import com.silauncer.cepat.apps.AppInfo
@@ -29,25 +29,42 @@ class AppAdapter(
     private var recyclerView: RecyclerView? = null
     private var lastHeight = 0
 
-    override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
-        super.onAttachedToRecyclerView(recyclerView)
-        this.recyclerView = recyclerView
-        recyclerView.viewTreeObserver.addOnGlobalLayoutListener {
-            val newHeight = recyclerView.measuredHeight
-            if (newHeight > 0 && newHeight != lastHeight) {
-                lastHeight = newHeight
-                notifyDataSetChanged()
+    private val layoutListener = ViewTreeObserver.OnGlobalLayoutListener {
+        val rv = recyclerView ?: return@OnGlobalLayoutListener
+        val newHeight = rv.measuredHeight
+        if (newHeight > 0 && newHeight != lastHeight) {
+            lastHeight = newHeight
+            rv.post {
+                if (recyclerView != null) {
+                    notifyDataSetChanged()
+                }
             }
         }
     }
 
+    override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
+        super.onAttachedToRecyclerView(recyclerView)
+        this.recyclerView = recyclerView
+        recyclerView.viewTreeObserver.addOnGlobalLayoutListener(layoutListener)
+    }
+
     override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
         super.onDetachedFromRecyclerView(recyclerView)
+        if (recyclerView.viewTreeObserver.isAlive) {
+            recyclerView.viewTreeObserver.removeOnGlobalLayoutListener(layoutListener)
+        }
         this.recyclerView = null
     }
 
+    override fun onViewRecycled(holder: AppViewHolder) {
+        super.onViewRecycled(holder)
+        holder.unbind()
+    }
+
     fun submitList(newList: List<AppInfo>) {
-        val diffResult = DiffUtil.calculateDiff(AppDiffCallback(apps, newList))
+        val oldSnapshot = ArrayList(apps)
+        val newSnapshot = ArrayList(newList)
+        val diffResult = DiffUtil.calculateDiff(AppDiffCallback(oldSnapshot, newSnapshot))
         apps.clear()
         apps.addAll(newList)
         diffResult.dispatchUpdatesTo(this)
@@ -109,17 +126,22 @@ class AppAdapter(
             recyclerView?.let { rv ->
                 val availableHeight = rv.measuredHeight - rv.paddingTop - rv.paddingBottom
                 if (availableHeight > 0 && gridRows > 0) {
-                    itemView.layoutParams = itemView.layoutParams.apply {
-                        height = availableHeight / gridRows
+                    val targetHeight = availableHeight / gridRows
+                    if (itemView.layoutParams.height != targetHeight) {
+                        itemView.layoutParams = itemView.layoutParams.apply {
+                            height = targetHeight
+                        }
                     }
                 }
             }
 
             itemView.setPadding(iconSpacingPx, iconSpacingPx, iconSpacingPx, iconSpacingPx)
             
-            iconView.layoutParams = iconView.layoutParams.apply {
-                width = iconSizePx
-                height = iconSizePx
+            if (iconView.layoutParams.width != iconSizePx || iconView.layoutParams.height != iconSizePx) {
+                iconView.layoutParams = iconView.layoutParams.apply {
+                    width = iconSizePx
+                    height = iconSizePx
+                }
             }
             
             val currentCacheKey = app.cacheKey
@@ -143,6 +165,13 @@ class AppAdapter(
                 onLongClick?.invoke(app)
                 true
             }
+        }
+
+        fun unbind() {
+            iconView.tag = null
+            iconView.setImageDrawable(null)
+            itemView.setOnClickListener(null)
+            itemView.setOnLongClickListener(null)
         }
     }
 }

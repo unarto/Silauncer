@@ -1,9 +1,11 @@
 package com.silauncer.cepat.apps
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import com.silauncer.cepat.R
 
@@ -11,7 +13,7 @@ class AppActionHandler(private val context: Context) {
 
     fun launchApp(app: AppInfo) {
         val intent = app.launchIntent()
-        context.startActivity(intent)
+        startActivitySafely(intent, app.name)
     }
 
     fun showAppMenu(app: AppInfo) {
@@ -34,13 +36,24 @@ class AppActionHandler(private val context: Context) {
         val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
             data = Uri.parse("package:${app.packageName}")
         }
-        context.startActivity(intent)
+        startActivitySafely(intent, app.name)
     }
 
     private fun requestUninstall(app: AppInfo) {
         val intent = Intent(Intent.ACTION_DELETE).apply {
             data = Uri.parse("package:${app.packageName}")
         }
-        context.startActivity(intent)
+        startActivitySafely(intent, app.name)
+    }
+
+    private fun startActivitySafely(intent: Intent, appName: String) {
+        try {
+            context.startActivity(intent)
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(context, "App not found: $appName", Toast.LENGTH_SHORT).show()
+        } catch (e: SecurityException) {
+            Toast.makeText(context, "Cannot open: $appName", Toast.LENGTH_SHORT).show()
+        }
     }
 }
+
