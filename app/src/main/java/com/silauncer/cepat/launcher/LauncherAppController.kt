@@ -61,6 +61,22 @@ class LauncherAppController(
                 if (!replacing) {
                     appStateHolder.removePackage(packageName, user)
                     IconCache.removePackage(packageName)
+                    
+                    val currentHidden = prefs.hiddenApps
+                    if (currentHidden.contains(packageName)) {
+                        prefs.hiddenApps = currentHidden - packageName
+                    }
+                    
+                    val currentOrder = prefs.appOrder
+                    if (currentOrder.isNotEmpty()) {
+                        val filteredOrder = currentOrder.filter { key ->
+                            key.substringBefore('/') != packageName
+                        }
+                        if (filteredOrder.size != currentOrder.size) {
+                            prefs.appOrder = filteredOrder
+                        }
+                    }
+                    
                     changed = true
                 }
             }

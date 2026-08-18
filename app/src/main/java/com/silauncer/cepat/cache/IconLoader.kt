@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import com.silauncer.cepat.apps.AppInfo
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -49,6 +50,8 @@ class IconLoader(private val scope: CoroutineScope) {
                         pm.getActivityIcon(appInfo.componentName)
                     } catch (e: PackageManager.NameNotFoundException) {
                         pm.defaultActivityIcon
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         pm.defaultActivityIcon // Fallback jika OS bermasalah
                     }
@@ -64,11 +67,13 @@ class IconLoader(private val scope: CoroutineScope) {
                 withContext(Dispatchers.Main) {
                     onLoaded(icon, cacheKey)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                // Gagal, buang dari in-flight agar bisa di-retry nanti
+                // Gagal memuat icon, biarkan logging / fallback tanpa menelan cancellation
             } finally {
-                // Bersihkan in-flight map agar memory tidak bocor
-                inFlightRequests.remove(cacheKey)
+                // Bersihkan in-flight map secara atomik hanya jika instance Deferred masih sama
+                inFlightRequests.remove(cacheKey, deferred)
             }
         }
     }
