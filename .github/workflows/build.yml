@@ -27,19 +27,16 @@ jobs:
       - name: Setup Android SDK Build-Tools
         uses: android-actions/setup-android@v3
 
-      - name: Validate Gradle Wrapper
-        run: |
-          if [ ! -f "gradlew" ] || [ ! -f "gradle/wrapper/gradle-wrapper.properties" ] || [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-            echo "Gradle wrapper incomplete. Bootstrapping reproducible wrapper..."
-            gradle wrapper
-          fi
-          chmod +x gradlew
-          ./gradlew --version
+      - name: Setup Gradle Wrapper
+        run: gradle wrapper --gradle-version 9.3.1
+
+      - name: Ensure gradlew is executable
+        run: chmod +x gradlew
 
       - name: Build Debug APK
         run: |
           ./gradlew clean
-          ./gradlew assembleDebug
+          ./gradlew :app:assembleDebug
 
       - name: Determine ABI Splits
         id: abi
