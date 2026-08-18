@@ -67,7 +67,7 @@ class SettingsActivity : AppCompatActivity() {
     private fun setupIconSizeSpinner(layout: LinearLayout) {
         SettingsUi.addSpinnerSetting(
             this, layout, "Icon Size (dp)",
-            arrayOf(32, 48, 64, 72),
+            arrayOf(32, 48, 56, 64, 72),
             prefs.iconSize
         ) { selected ->
             prefs.iconSize = selected
@@ -165,11 +165,11 @@ class SettingsActivity : AppCompatActivity() {
     private fun resetSettings() {
         prefs.gridColumns = 5
         prefs.gridRows = 6
-        prefs.iconSize = 48
+        prefs.iconSize = 56
         prefs.sortMode = "a_z"
         prefs.showAppLabel = true
         prefs.labelSize = 12f
-        prefs.iconSpacing = 8
+        prefs.iconSpacing = 4
         prefs.dragDropEnabled = true
         prefs.appOrder = emptyList()
     }

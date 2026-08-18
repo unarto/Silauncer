@@ -16,7 +16,7 @@ class LauncherPreferences {
         set(value) { kv.encode("grid_rows", value) }
 
     var iconSize: Int
-        get() = kv.decodeInt("icon_size", 48)
+        get() = kv.decodeInt("icon_size", 56)
         set(value) { kv.encode("icon_size", value) }
 
     var sortMode: String
@@ -32,7 +32,7 @@ class LauncherPreferences {
         set(value) { kv.encode("label_size", value) }
 
     var iconSpacing: Int
-        get() = kv.decodeInt("icon_spacing", 8)
+        get() = kv.decodeInt("icon_spacing", 4)
         set(value) { kv.encode("icon_spacing", value) }
 
     var hiddenApps: Set<String>

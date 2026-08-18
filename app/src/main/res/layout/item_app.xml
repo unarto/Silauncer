@@ -2,16 +2,18 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:gravity="center"
+    android:gravity="center_horizontal|top"
     android:orientation="vertical"
-    android:padding="8dp"
     android:background="?android:attr/selectableItemBackgroundBorderless">
 
     <ImageView
         android:id="@+id/app_icon"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
         android:layout_marginBottom="4dp"
+        android:background="@drawable/bg_app_icon"
+        android:clipToOutline="true"
+        android:scaleType="fitCenter"
         android:contentDescription="@string/app_name" />
 
     <TextView
@@ -19,13 +21,14 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:ellipsize="end"
-        android:gravity="center"
+        android:gravity="center_horizontal|top"
         android:maxLines="2"
+        android:minLines="2"
         android:textColor="@android:color/white"
         android:shadowColor="#80000000"
         android:shadowDx="1"
         android:shadowDy="1"
         android:shadowRadius="2"
-        android:textSize="12sp" />
+        android:textSize="11sp" />
 
 </LinearLayout>

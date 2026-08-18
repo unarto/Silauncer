@@ -123,18 +123,6 @@ class AppAdapter(
         private val nameView: TextView = itemView.findViewById(R.id.app_name)
 
         fun bind(app: AppInfo) {
-            recyclerView?.let { rv ->
-                val availableHeight = rv.measuredHeight - rv.paddingTop - rv.paddingBottom
-                if (availableHeight > 0 && gridRows > 0) {
-                    val targetHeight = availableHeight / gridRows
-                    if (itemView.layoutParams.height != targetHeight) {
-                        itemView.layoutParams = itemView.layoutParams.apply {
-                            height = targetHeight
-                        }
-                    }
-                }
-            }
-
             itemView.setPadding(iconSpacingPx, iconSpacingPx, iconSpacingPx, iconSpacingPx)
             
             if (iconView.layoutParams.width != iconSizePx || iconView.layoutParams.height != iconSizePx) {
