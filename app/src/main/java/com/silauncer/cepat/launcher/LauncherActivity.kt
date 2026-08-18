@@ -10,7 +10,8 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import com.silauncer.cepat.R
 import com.silauncer.cepat.apps.AppActionHandler
 import com.silauncer.cepat.apps.AppChangeReceiver
-import com.silauncer.cepat.apps.AppRepository
+import com.silauncer.cepat.apps.AppDataSource
+import com.silauncer.cepat.apps.AppStateHolder
 import com.silauncer.cepat.home.AppAdapter
 import com.silauncer.cepat.home.OverScroll
 import com.silauncer.cepat.storage.LauncherPreferences
@@ -33,9 +34,10 @@ class LauncherActivity : AppCompatActivity() {
         setContentView(R.layout.activity_launcher)
         
         prefs = LauncherPreferences()
-        val appRepository = AppRepository(applicationContext)
+        val appDataSource = AppDataSource(applicationContext)
+        val appStateHolder = AppStateHolder()
         
-        appController = LauncherAppController(appRepository, prefs)
+        appController = LauncherAppController(appDataSource, appStateHolder, prefs)
         actionHandler = AppActionHandler(this)
 
         recyclerView = findViewById(R.id.app_grid)
@@ -45,7 +47,7 @@ class LauncherActivity : AppCompatActivity() {
         val iconSizePx = (prefs.iconSize * resources.displayMetrics.density).toInt()
         val spacingPx = (prefs.iconSpacing * resources.displayMetrics.density).toInt()
         
-        adapter = AppAdapter(iconSizePx, prefs.showAppLabel, prefs.labelSize, spacingPx, prefs.gridRows) { app ->
+        adapter = AppAdapter(lifecycleScope, iconSizePx, prefs.showAppLabel, prefs.labelSize, spacingPx, prefs.gridRows) { app ->
             if (app.packageName == applicationContext.packageName) {
                 try {
                     startActivity(android.content.Intent(this, com.silauncer.cepat.settings.SettingsActivity::class.java))
@@ -108,9 +110,11 @@ class LauncherActivity : AppCompatActivity() {
         touchHelper.attachToRecyclerView(recyclerView)
         
         appChangeReceiver = AppChangeReceiver { action, packageName, replacing ->
-            val changed = appController.handlePackageEvent(action, packageName, replacing)
+            lifecycleScope.launch {
+                val changed = appController.handlePackageEvent(action, packageName, replacing)
             if (changed) {
                 refreshAppsUI()
+            }
             }
         }
         appChangeReceiver.register(this)

@@ -11,8 +11,10 @@ import androidx.recyclerview.widget.RecyclerView
 import com.silauncer.cepat.R
 import com.silauncer.cepat.apps.AppInfo
 import com.silauncer.cepat.cache.IconLoader
+import kotlinx.coroutines.CoroutineScope
 
 class AppAdapter(
+    private val coroutineScope: CoroutineScope,
     private var iconSizePx: Int,
     private var showAppLabel: Boolean,
     private var labelSizeSp: Float,
@@ -22,6 +24,7 @@ class AppAdapter(
 ) : RecyclerView.Adapter<AppAdapter.AppViewHolder>() {
 
     private val apps = mutableListOf<AppInfo>()
+    private val iconLoader = IconLoader(coroutineScope)
     private var recyclerView: RecyclerView? = null
     private var lastHeight = 0
 
@@ -118,7 +121,13 @@ class AppAdapter(
                 height = iconSizePx
             }
             
-            iconView.setImageDrawable(IconLoader.getIcon(itemView.context, app))
+            val currentCacheKey = app.cacheKey
+            iconView.tag = currentCacheKey
+            iconLoader.loadIconAsync(itemView.context, app) { drawable, loadedKey ->
+                if (iconView.tag == loadedKey) {
+                    iconView.setImageDrawable(drawable)
+                }
+            }
             
             if (showAppLabel) {
                 nameView.visibility = View.VISIBLE

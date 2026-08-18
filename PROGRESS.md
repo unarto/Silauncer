@@ -47,3 +47,8 @@ PROGRESS.md update done
   - Memindahkan logika respon perubahan paket (tambah, hapus, perbarui) beserta invaldasi _cache_ secara spesifik (incremental) ke dalam `LauncherAppController` (`handlePackageEvent`).
   - Tidak terjadi penambahan lapisan arsitektur *event/manager* berlebih (hanya mengoper via *higher-order function / callback* biasa ke UI yang lantas memanggil `AppController`).
 - **SELESAI**: Mengubah `applicationId` dari `com.silauncer.fihsfp` menjadi `com.silauncer.cepat` pada `app/build.gradle.kts`.
+- **SELESAI**: Melakukan refactor pada `SettingsActivity` dengan menerapkan Single Responsibility Principle:
+  - Membuat `SettingsUi` untuk menyederhanakan pembuatan komponen UI seperti Spinner dan Section Label, menghindari duplikasi kode pada *SettingsActivity*.
+  - Membuat `HiddenAppsDialog` untuk memisahkan logika pengelolaan *Hidden Apps* dari *SettingsActivity*.
+  - Menyederhanakan `SettingsActivity` sehingga murni menangani *lifecycle*, merangkai *UI*, dan mengelola state *reset*.
+  - Tidak ada perubahan pada perilaku fungsional atau antarmuka.

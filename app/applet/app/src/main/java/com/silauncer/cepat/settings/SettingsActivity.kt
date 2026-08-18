@@ -6,7 +6,6 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
 import android.app.AlertDialog
 import com.silauncer.cepat.storage.LauncherPreferences
 
@@ -117,13 +116,7 @@ class SettingsActivity : AppCompatActivity() {
         val hiddenAppsBtn = Button(this).apply {
             text = "Manage Hidden Apps"
             setOnClickListener {
-                lifecycleScope.launch {
-                    val useCase = com.silauncer.cepat.apps.GetInstalledAppsUseCase(com.silauncer.cepat.apps.AppDataSource(this@SettingsActivity))
-                    val apps = useCase()
-                    if (!isFinishing && !isDestroyed) {
-                        HiddenAppsDialog.show(this@SettingsActivity, apps, prefs)
-                    }
-                }
+                HiddenAppsDialog.show(this@SettingsActivity, lifecycleScope, prefs)
             }
         }
         layout.addView(hiddenAppsBtn)
