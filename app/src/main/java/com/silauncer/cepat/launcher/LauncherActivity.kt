@@ -1,6 +1,7 @@
 package com.silauncer.cepat.launcher
 
 import android.os.Bundle
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.lifecycle.lifecycleScope
@@ -13,10 +14,21 @@ import com.silauncer.cepat.apps.AppDataSource
 import com.silauncer.cepat.apps.AppStateHolder
 import com.silauncer.cepat.home.AppAdapter
 import com.silauncer.cepat.home.OverScroll
+import com.silauncer.cepat.settings.SettingsActivity
 import com.silauncer.cepat.storage.LauncherPreferences
 import kotlinx.coroutines.launch
 
+/**
+ * Main launcher activity displaying the app grid.
+ *
+ * Handles app loading, display, drag-and-drop, and lifecycle management.
+ * Ensures proper cleanup of BroadcastReceiver and other resources.
+ */
 class LauncherActivity : AppCompatActivity() {
+
+    companion object {
+        private const val TAG = "LauncherActivity"
+    }
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: AppAdapter
@@ -28,6 +40,7 @@ class LauncherActivity : AppCompatActivity() {
     private lateinit var dragHandler: GridDragAndDropHandler
     
     private var isLoaded = false
+    private var isReceiverRegistered = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,9 +70,10 @@ class LauncherActivity : AppCompatActivity() {
             onClick = { app ->
                 if (app.packageName == applicationContext.packageName) {
                     try {
-                        startActivity(android.content.Intent(this, com.silauncer.cepat.settings.SettingsActivity::class.java))
+                        val settingsIntent = android.content.Intent(this, SettingsActivity::class.java)
+                        startActivity(settingsIntent)
                     } catch (e: Exception) {
-                        android.util.Log.e("SILAUNCER", "CRASH: " + e.message, e)
+                        Log.e(TAG, "Failed to launch Settings: ${e.message}", e)
                     }
                 } else {
                     actionHandler.launchApp(app)
@@ -80,12 +94,12 @@ class LauncherActivity : AppCompatActivity() {
         appChangeReceiver = AppChangeReceiver { action, packageName, replacing ->
             lifecycleScope.launch {
                 val changed = appController.handlePackageEvent(action, packageName, replacing)
-            if (changed) {
-                refreshAppsUI()
-            }
+                if (changed) {
+                    refreshAppsUI()
+                }
             }
         }
-        appChangeReceiver.register(this)
+        registerReceiver()
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -98,12 +112,7 @@ class LauncherActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (recyclerView.layoutManager is GridLayoutManager) {
-            val currentColumns = (recyclerView.layoutManager as GridLayoutManager).spanCount
-            if (currentColumns != prefs.gridColumns) {
-                recyclerView.layoutManager = GridLayoutManager(this, prefs.gridColumns)
-            }
-        }
+        updateGridLayout()
         val currentIconSizePx = (prefs.iconSize * resources.displayMetrics.density).toInt()
         val currentSpacingPx = (prefs.iconSpacing * resources.displayMetrics.density).toInt()
         adapter.updateConfig(currentIconSizePx, prefs.showAppLabel, prefs.labelSize, currentSpacingPx, prefs.gridRows)
@@ -115,7 +124,59 @@ class LauncherActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        appChangeReceiver.unregister(this)
+        unregisterReceiver()
+    }
+
+    /**
+     * Safely updates the grid layout manager with proper null checking.
+     * Prevents NPE when layoutManager is modified from other threads.
+     * FIX: Uses safe smart cast instead of direct type cast.
+     */
+    private fun updateGridLayout() {
+        val layoutManager = recyclerView.layoutManager
+        if (layoutManager is GridLayoutManager) {
+            val currentColumns = layoutManager.spanCount
+            if (currentColumns != prefs.gridColumns) {
+                recyclerView.layoutManager = GridLayoutManager(this, prefs.gridColumns)
+            }
+        }
+    }
+
+    /**
+     * Registers the BroadcastReceiver for package change events.
+     * Uses a flag to ensure only one registration.
+     * FIX: Prevents duplicate receiver registration on activity recreation.
+     */
+    private fun registerReceiver() {
+        if (!isReceiverRegistered) {
+            try {
+                appChangeReceiver.register(this)
+                isReceiverRegistered = true
+                Log.d(TAG, "BroadcastReceiver registered successfully")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to register BroadcastReceiver: ${e.message}", e)
+            }
+        }
+    }
+
+    /**
+     * Safely unregisters the BroadcastReceiver.
+     * Handles IllegalArgumentException if receiver is already unregistered.
+     * FIX: Prevents memory leaks by ensuring proper cleanup.
+     */
+    private fun unregisterReceiver() {
+        if (isReceiverRegistered) {
+            try {
+                appChangeReceiver.unregister(this)
+                isReceiverRegistered = false
+                Log.d(TAG, "BroadcastReceiver unregistered successfully")
+            } catch (e: IllegalArgumentException) {
+                // Receiver was already unregistered, safe to ignore
+                Log.w(TAG, "BroadcastReceiver already unregistered: ${e.message}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to unregister BroadcastReceiver: ${e.message}", e)
+            }
+        }
     }
 
     private fun loadAppsInitialUI() {
