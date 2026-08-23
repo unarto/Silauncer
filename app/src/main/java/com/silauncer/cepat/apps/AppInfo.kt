@@ -31,5 +31,5 @@ data class AppInfo(
      * Kunci unik untuk cache aplikasi/icon.
      */
     val cacheKey: String
-        get() = "${user.hashCode()}:$componentName"
+        get() = "${user.identifier}:${componentName.flattenToString()}"
 }

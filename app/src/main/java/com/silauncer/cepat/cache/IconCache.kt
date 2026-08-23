@@ -15,7 +15,9 @@ object IconCache {
     }
 
     fun removePackage(packageName: String) {
-        val keysToRemove = cache.snapshot().keys.filter { it.substringAfter(":").startsWith("ComponentInfo{$packageName/") }
+        val keysToRemove = cache.snapshot().keys.filter { key ->
+            key.substringAfter(':').substringBefore('/') == packageName
+        }
         for (key in keysToRemove) {
             cache.remove(key)
         }

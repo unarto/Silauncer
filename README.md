@@ -50,8 +50,8 @@
 
 1. Buka proyek ini di Android Studio.
 2. Pastikan SDK Android 36 dan JDK 11 atau yang lebih baru sudah terinstal.
-3. Jalankan perintah build Gradle:
+3. Pastikan Gradle 9.3.1 tersedia, lalu jalankan perintah build:
    ```bash
-   ./gradlew assembleDebug
+   gradle assembleDebug
    ```
 4. Pasang APK hasil build ke perangkat Android atau emulator.

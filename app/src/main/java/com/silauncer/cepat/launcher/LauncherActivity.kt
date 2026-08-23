@@ -80,9 +80,9 @@ class LauncherActivity : AppCompatActivity() {
         appChangeReceiver = AppChangeReceiver { action, packageName, replacing ->
             lifecycleScope.launch {
                 val changed = appController.handlePackageEvent(action, packageName, replacing)
-            if (changed) {
-                refreshAppsUI()
-            }
+                if (changed) {
+                    refreshAppsUI()
+                }
             }
         }
         appChangeReceiver.register(this)

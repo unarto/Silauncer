@@ -58,7 +58,7 @@ class LauncherAppController(
             }
             Intent.ACTION_PACKAGE_REMOVED -> {
                 if (!replacing) {
-                    appStateHolder.removePackage(packageName, user)
+                    val removed = appStateHolder.removePackage(packageName, user)
                     IconCache.removePackage(packageName)
                     
                     val currentHidden = prefs.hiddenApps
@@ -76,15 +76,15 @@ class LauncherAppController(
                         }
                     }
                     
-                    changed = true
+                    changed = removed
                 }
             }
             Intent.ACTION_PACKAGE_CHANGED, Intent.ACTION_PACKAGE_REPLACED -> {
-                appStateHolder.removePackage(packageName, user)
+                val removed = appStateHolder.removePackage(packageName, user)
                 val newApps = appDataSource.getInstalledApps(packageName, user)
                 val updated = appStateHolder.addApps(newApps)
                 IconCache.removePackage(packageName)
-                if (updated.isNotEmpty()) changed = true
+                changed = removed || updated.isNotEmpty()
             }
         }
         return changed

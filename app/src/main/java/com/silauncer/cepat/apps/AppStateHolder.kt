@@ -31,11 +31,9 @@ class AppStateHolder {
         return added
     }
 
-    suspend fun removePackage(packageName: String, user: UserHandle) {
-        mutex.withLock {
-            apps.removeAll {
-                it.user == user && it.packageName == packageName
-            }
+    suspend fun removePackage(packageName: String, user: UserHandle): Boolean = mutex.withLock {
+        apps.removeAll {
+            it.user == user && it.packageName == packageName
         }
     }
 }
